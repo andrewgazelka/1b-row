@@ -8,31 +8,17 @@ publish = false
 
 [dependencies]
 fxhash = "0.2.1"
-memmap2 = "0.9.4"
+num_cpus = "1.16.0"
+project-root = "0.2.2"
 
 [dev-dependencies]
 divan = "0.1.14"
 
 
 [profile.release]
-#debug = true
 lto = "fat"
 codegen-units = 1
-#strip = false
-#panic = "abort"
 
 [[bench]]
 harness = false
 name = "trie"
-
-
-[lints.clippy]
-complexity = "deny"
-
-nursery = { level = "deny", priority = -1 }
-redundant_pub_crate = "allow"
-
-pedantic = "deny"
-perf = "deny"
-style = "deny"
-suspicious = "deny"

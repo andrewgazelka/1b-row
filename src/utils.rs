@@ -9,7 +9,6 @@ use std::{
         Simd,
     },
 };
-
 use fxhash::FxHashMap;
 
 #[derive(Default)]
@@ -37,9 +36,8 @@ impl Display for Stats {
 }
 
 #[allow(clippy::cast_possible_truncation)]
-#[must_use]
 pub fn read_delimiters(data: &[u8]) {
-    let mut map: HashMap<&str, Stats, _> = FxHashMap::default();
+    let mut map: HashMap<u32, Stats, _> = FxHashMap::default();
 
     let semicolon: u8 = b';';
     let newline: u8 = b'\n';
@@ -119,14 +117,6 @@ pub fn read_delimiters(data: &[u8]) {
 
             // let simd_chunk: Simd<u8, 64> = Simd::from_slice(byte);
         }
-        // println!("ascii");
-        // println!("raw hex bytes {:X?}", byte);
-        // let s = unsafe {
-        //     core::str::from_utf8_unchecked(
-        //         &data[start_idx as usize..start_idx as usize + chunk_size],
-        //     )
-        // };
-        // println!("all ascii here {:?}", s);
 
         let semicolon_mask = simd_chunk.simd_eq(Simd::splat(semicolon));
         let newline_mask = simd_chunk.simd_eq(Simd::splat(newline));
@@ -154,6 +144,7 @@ pub fn read_delimiters(data: &[u8]) {
             let value = unsafe { std::str::from_utf8_unchecked(value) };
             let value = value.parse::<f64>().unwrap();
 
+            let key = fxhash::hash32(key);
             let stats = map.entry(key).or_default();
             stats.update(value);
 
@@ -162,7 +153,7 @@ pub fn read_delimiters(data: &[u8]) {
 
         if chunk_idx % 1_000_000 == 0 {
             let pos_len = positions.len();
-            println!("line {:.2}M", pos_len as f64 / 2.0 / 1000.0 / 1000.0);
+            // println!("line {:.2}M", pos_len as f64 / 2.0 / 1000.0 / 1000.0);
         }
     }
 
@@ -182,9 +173,9 @@ pub fn read_delimiters(data: &[u8]) {
 
     //
 
-    for (k, v) in map {
-        println!("{k:?} -> {v:.2}");
-    }
+    // for (k, v) in map {
+    //     println!("{k:?} -> {v:.2}");
+    // }
 }
 // static INPUT: &[u8] = b"\
 // Hiroshima;18.5

@@ -1,24 +1,44 @@
-use std::{
-    fs::File,
-    io,
-    io::{BufReader, Cursor, Read},
-    os::unix::fs::MetadataExt,
-};
+use std::time::Instant;
 
-use memmap2::MmapOptions;
+use row_challenge::{obtain_data, preceding_line_start_idx};
 
 fn main() {
-    let mut file = File::open("measurements.txt").unwrap();
-    let meta = file.metadata().unwrap();
-    let size = meta.size();
+    println!("loading file into memory");
+    let data = obtain_data();
 
-    // Create a memory-mapped file
-    // let mmap = unsafe { MmapOptions::new().map(&file).unwrap() };
+    println!("starting");
+    let core_count = num_cpus::get();
 
-    // create vec of size / 8
-    let mut data = vec![0; size as usize];
-    file.read_exact(&mut data).unwrap();
+    let size = data.len() as u64;
+    let per_core_len = (size as usize + core_count - 1) / core_count;
 
-    let res = row_challenge::utils::read_delimiters(&data);
-    println!("{res:?}");
+    let mut start_idx = 0;
+
+    let start = Instant::now();
+
+    std::thread::scope(|s| {
+        for i in 1..=core_count {
+            let data = if i == core_count {
+                &data[start_idx..]
+            } else {
+                let tentative_end_idx = start_idx + per_core_len;
+                let end_idx = preceding_line_start_idx(&data, tentative_end_idx);
+                let data = &data[start_idx..=end_idx];
+
+                start_idx = end_idx + 1;
+                data
+            };
+
+            if i == core_count {
+                row_challenge::utils::read_delimiters(data);
+            } else {
+                s.spawn(|| {
+                    row_challenge::utils::read_delimiters(data);
+                });
+            }
+        }
+    });
+
+    let seconds = start.elapsed().as_millis() as f64 / 1000.0;
+    println!("elapsed: {seconds:.3}s");
 }
